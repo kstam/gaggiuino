@@ -264,16 +264,16 @@ void setup() {
         BAR_TO_DIMMER_OUTPUT[9]=70;
         break;
       case 60: // 120v / 60 Hz
-	BAR_TO_DIMMER_OUTPUT[0]=45;
-        BAR_TO_DIMMER_OUTPUT[1]=52;
-        BAR_TO_DIMMER_OUTPUT[2]=58;
-        BAR_TO_DIMMER_OUTPUT[3]=59;
-        BAR_TO_DIMMER_OUTPUT[4]=60;
-        BAR_TO_DIMMER_OUTPUT[5]=62;
-        BAR_TO_DIMMER_OUTPUT[6]=67;
-        BAR_TO_DIMMER_OUTPUT[7]=72;
-        BAR_TO_DIMMER_OUTPUT[8]=75;
-        BAR_TO_DIMMER_OUTPUT[9]=85;
+        BAR_TO_DIMMER_OUTPUT[0]=45;
+        BAR_TO_DIMMER_OUTPUT[1]=51;
+        BAR_TO_DIMMER_OUTPUT[2]=53;
+        BAR_TO_DIMMER_OUTPUT[3]=56;
+        BAR_TO_DIMMER_OUTPUT[4]=58;
+        BAR_TO_DIMMER_OUTPUT[5]=60;
+        BAR_TO_DIMMER_OUTPUT[6]=63;
+        BAR_TO_DIMMER_OUTPUT[7]=65;
+        BAR_TO_DIMMER_OUTPUT[8]=70;
+        BAR_TO_DIMMER_OUTPUT[9]=73;
         break;
       default: // smth went wrong the pump is set to 0 bar in all modes.
         break;
@@ -468,6 +468,8 @@ void modeSelect() {
 //#############################################################################################
 void justDoCoffee() {
   uint8_t HPWR_LOW = HPWR/MainCycleDivider;
+  static double heaterWave;
+  static uint8_t heaterState;
   // Calculating the boiler heating power range based on the below input values
   HPWR_OUT = mapRange(kProbeReadValue, setPoint - 10, setPoint, HPWR, HPWR_LOW, 0);
   HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, HPWR);  // limits range of sensor values to HPWR_LOW and HPWR
@@ -480,10 +482,15 @@ void justDoCoffee() {
     myNex.writeNum("warmupState", 0);
   // Applying the HPWR_OUT variable as part of the relay switching logic
     if (kProbeReadValue > setPoint-3.0 && kProbeReadValue < setPoint+0.5) {
-      PORTB |= _BV(PB0);   // relayPin -> HIGH
-      delay(HPWR_OUT/BrewCycleDivider);  // delaying the relayPin state change
-      PORTB &= ~_BV(PB0);  // relayPin -> LOW
-      delay(HPWR_OUT); 
+	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
+		  PORTB |= _BV(PB0);  // relayPin -> HIGH
+		  heaterState=1;
+		  heaterWave=millis();
+	  }else if (millis() - heaterWave > HPWR_OUT && heaterState == 1) {
+		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
+		  heaterState=0;
+		  heaterWave=millis();
+	  }	  
     }else if(kProbeReadValue <= setPoint-3.0) PORTB |= _BV(PB0);   // relayPin -> HIGH
     else PORTB &= ~_BV(PB0);  // relayPin -> LOW
   } else {
@@ -491,19 +498,32 @@ void justDoCoffee() {
     if (kProbeReadValue < ((float)setPoint - 10.00)) {
       PORTB |= _BV(PB0);  // relayPin -> HIGH
     } else if (kProbeReadValue >= ((float)setPoint - 10.00) && kProbeReadValue < ((float)setPoint - 3.00)) {
-      PORTB |= _BV(PB0);   // relayPin -> HIGH
-      delay(HPWR_OUT);  // delaying the relayPin state for <HPWR_OUT> ammount of time
-      PORTB &= ~_BV(PB0);  // relayPin -> LOW
+	  PORTB |= _BV(PB0);  // relayPin -> HIGH
+	  if (millis() - heaterWave > HPWR_OUT) {
+		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
+		  heaterState=0;
+		  heaterWave=millis();
+	  }
     } else if ((kProbeReadValue >= ((float)setPoint - 3.00)) && (kProbeReadValue <= ((float)setPoint - 1.00))) {
-      PORTB |= _BV(PB0);   // relayPin -> HIGH
-      delay(HPWR_OUT);  // delaying the relayPin state for <HPWR_OUT> ammount of time
-      PORTB &= ~_BV(PB0);  // relayPin -> LOW
-      delay(HPWR_OUT);  // delaying the relayPin state for <HPWR_OUT> ammount of time
+	  if (millis() - heaterWave > HPWR_OUT && heaterState == 0) {
+		  PORTB |= _BV(PB0);  // relayPin -> HIGH
+		  heaterState=1;
+		  heaterWave=millis();
+	  }else if (millis() - heaterWave > HPWR_OUT && heaterState == 1) {
+		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
+		  heaterState=0;
+		  heaterWave=millis();
+	  }	
     } else if ((kProbeReadValue >= ((float)setPoint - 0.5)) && kProbeReadValue < (float)setPoint) {
-      PORTB |= _BV(PB0);   // relayPin -> HIGH
-      delay(HPWR_OUT/2);  // delaying the relayPin state for <HPWR_OUT> ammount of time
-      PORTB &= ~_BV(PB0);  // relayPin -> LOW
-      delay(HPWR_OUT*2);  // delaying the relayPin state for <HPWR_OUT> ammount of time
+	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
+		  PORTB |= _BV(PB0);  // relayPin -> HIGH
+		  heaterState=1;
+		  heaterWave=millis();
+	  }else if (millis() - heaterWave > HPWR_OUT*BrewCycleDivider && heaterState == 1) {
+		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
+		  heaterState=0;
+		  heaterWave=millis();
+	  }
     } else {
       PORTB &= ~_BV(PB0);  // relayPin -> LOW
     }
