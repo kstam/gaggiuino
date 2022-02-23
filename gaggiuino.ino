@@ -265,15 +265,15 @@ void setup() {
         break;
       case 60: // 120v / 60 Hz
         BAR_TO_DIMMER_OUTPUT[0]=45;
-        BAR_TO_DIMMER_OUTPUT[1]=51;
-        BAR_TO_DIMMER_OUTPUT[2]=53;
-        BAR_TO_DIMMER_OUTPUT[3]=56;
-        BAR_TO_DIMMER_OUTPUT[4]=58;
-        BAR_TO_DIMMER_OUTPUT[5]=60;
-        BAR_TO_DIMMER_OUTPUT[6]=63;
-        BAR_TO_DIMMER_OUTPUT[7]=65;
-        BAR_TO_DIMMER_OUTPUT[8]=70;
-        BAR_TO_DIMMER_OUTPUT[9]=73;
+        BAR_TO_DIMMER_OUTPUT[1]=53;
+        BAR_TO_DIMMER_OUTPUT[2]=59;
+        BAR_TO_DIMMER_OUTPUT[3]=60;
+        BAR_TO_DIMMER_OUTPUT[4]=61;
+        BAR_TO_DIMMER_OUTPUT[5]=64;
+        BAR_TO_DIMMER_OUTPUT[6]=68;
+        BAR_TO_DIMMER_OUTPUT[7]=73;
+        BAR_TO_DIMMER_OUTPUT[8]=76;
+        BAR_TO_DIMMER_OUTPUT[9]=86;
         break;
       default: // smth went wrong the pump is set to 0 bar in all modes.
         break;
@@ -362,9 +362,9 @@ uint8_t setPressure(float wantedValue, uint8_t minVal, uint8_t maxVal) {
   if (brewState() == 1 ) {
 	prevOutputValue=outputValue;
     if (livePressure < wantedValue) {
-      if ((livePressure/wantedValue) < 0.5) outputValue = BAR_TO_DIMMER_OUTPUT[uint8_t(wantedValue)];
+      if ((livePressure/wantedValue) < 0.6) outputValue = BAR_TO_DIMMER_OUTPUT[uint8_t(wantedValue)];
       else if ((livePressure/wantedValue)> 0.95 ) outputValue--;
-      else if ((livePressure/wantedValue) > 0.5 && (livePressure/wantedValue) < 0.8 ) outputValue++;
+      else if ((livePressure/wantedValue) > 0.6 && (livePressure/wantedValue) < 0.8 ) outputValue++;
       else return prevOutputValue;
 	  constrain(outputValue,BAR_TO_DIMMER_OUTPUT[0],BAR_TO_DIMMER_OUTPUT[9]);
       return outputValue;
@@ -486,7 +486,7 @@ void justDoCoffee() {
 		  PORTB |= _BV(PB0);  // relayPin -> HIGH
 		  heaterState=1;
 		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT && heaterState == 1) {
+	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
 		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
 		  heaterState=0;
 		  heaterWave=millis();
@@ -499,17 +499,17 @@ void justDoCoffee() {
       PORTB |= _BV(PB0);  // relayPin -> HIGH
     } else if (kProbeReadValue >= ((float)setPoint - 10.00) && kProbeReadValue < ((float)setPoint - 3.00)) {
 	  PORTB |= _BV(PB0);  // relayPin -> HIGH
-	  if (millis() - heaterWave > HPWR_OUT) {
+	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider) {
 		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
 		  heaterState=0;
 		  heaterWave=millis();
 	  }
     } else if ((kProbeReadValue >= ((float)setPoint - 3.00)) && (kProbeReadValue <= ((float)setPoint - 1.00))) {
-	  if (millis() - heaterWave > HPWR_OUT && heaterState == 0) {
+	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
 		  PORTB |= _BV(PB0);  // relayPin -> HIGH
 		  heaterState=1;
 		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT && heaterState == 1) {
+	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
 		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
 		  heaterState=0;
 		  heaterWave=millis();
@@ -519,7 +519,7 @@ void justDoCoffee() {
 		  PORTB |= _BV(PB0);  // relayPin -> HIGH
 		  heaterState=1;
 		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT*BrewCycleDivider && heaterState == 1) {
+	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
 		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
 		  heaterState=0;
 		  heaterWave=millis();
@@ -544,7 +544,7 @@ void steamCtrl() {
     }else if(boilerPressure >=9.1) PORTB &= ~_BV(PB0);  // relayPin -> LOW
   }else if (brewState() == 1) { //added to cater for hot water from steam wand functionality
 	if (boilerPressure <= 9.0) {
-      if ((kProbeReadValue > setPoint-10.00) && (kProbeReadValue <=115)) PORTB |= _BV(PB0);  // relayPin -> HIGH
+      if ((kProbeReadValue > setPoint-10.00) && (kProbeReadValue <=105)) PORTB |= _BV(PB0);  // relayPin -> HIGH
       else PORTB &= ~_BV(PB0);  // relayPin -> LOW
     }else if(boilerPressure >=9.1) PORTB &= ~_BV(PB0);  // relayPin -> LOW
   }else PORTB &= ~_BV(PB0);  // relayPin -> LOW
