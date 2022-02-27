@@ -51,7 +51,7 @@ const float voltageZero = 0.49; // the voltage output by the transducer at 0bar 
 float pressureValue; //variable to store the value coming from the pressure transducer
 
 // setting the pump precalibrated array of "rough" dimmer output values
-uint8_t BAR_TO_DIMMER_OUTPUT[10];
+uint8_t BAR_TO_DIMMER_OUTPUT[11];
 
 
 // Some vars are better global
@@ -62,6 +62,7 @@ unsigned long thermoTimer;
 //scales vars
 float currentWeight;
 float previousWeight;
+float flowVal;
 uint8_t targetWeight;
 
 
@@ -262,6 +263,7 @@ void setup() {
         BAR_TO_DIMMER_OUTPUT[7]=65;
         BAR_TO_DIMMER_OUTPUT[8]=68;
         BAR_TO_DIMMER_OUTPUT[9]=70;
+        BAR_TO_DIMMER_OUTPUT[10]=95;
         break;
       case 60: // 120v / 60 Hz
         BAR_TO_DIMMER_OUTPUT[0]=45;
@@ -274,6 +276,7 @@ void setup() {
         BAR_TO_DIMMER_OUTPUT[7]=73;
         BAR_TO_DIMMER_OUTPUT[8]=76;
         BAR_TO_DIMMER_OUTPUT[9]=86;
+        BAR_TO_DIMMER_OUTPUT[10]=95;
         break;
       default: // smth went wrong the pump is set to 0 bar in all modes.
         break;
@@ -360,21 +363,27 @@ uint8_t setPressure(float wantedValue, uint8_t minVal, uint8_t maxVal) {
   float livePressure = getPressure();
 
   if (brewState() == 1 ) {
-	prevOutputValue=outputValue;
+	  prevOutputValue=outputValue;
     if (livePressure < wantedValue) {
-      if ((livePressure/wantedValue) < 0.6) outputValue = BAR_TO_DIMMER_OUTPUT[uint8_t(wantedValue)];
-      else if ((livePressure/wantedValue)> 0.95 ) outputValue--;
-      else if ((livePressure/wantedValue) > 0.6 && (livePressure/wantedValue) < 0.8 ) outputValue++;
-      else return prevOutputValue;
-	  constrain(outputValue,BAR_TO_DIMMER_OUTPUT[0],BAR_TO_DIMMER_OUTPUT[9]);
-      return outputValue;
+    //  if (millis()-refreshTimer > 100) {
+        if ((livePressure/wantedValue) < 0.5) outputValue = BAR_TO_DIMMER_OUTPUT[uint8_t(wantedValue)];
+        else if ((livePressure/wantedValue)> 0.9 ) outputValue--;
+        else if ((livePressure/wantedValue) >= 0.5 && (livePressure/wantedValue) < 0.8 ) outputValue++;
+        else return prevOutputValue;
+        constrain(outputValue,BAR_TO_DIMMER_OUTPUT[0],BAR_TO_DIMMER_OUTPUT[10]);
+    //    refreshTimer = millis();
+    //  }
+	    return outputValue;
     }
     else if (livePressure > wantedValue) {
-      if ((wantedValue/livePressure) > 0.8 && (wantedValue/livePressure) < 0.95) return prevOutputValue;
-      else if ((wantedValue/livePressure) > 0.5 && (wantedValue/livePressure) < 0.8 ) outputValue--;
-      else if ((wantedValue/livePressure) > 0.95 )outputValue++;
-      constrain(outputValue,BAR_TO_DIMMER_OUTPUT[0],BAR_TO_DIMMER_OUTPUT[9]);
-      return outputValue;
+    //  if (millis()-refreshTimer > 100) {
+        if ((wantedValue/livePressure) > 0.85 && (wantedValue/livePressure) < 0.95) return prevOutputValue;
+        else if ((wantedValue/livePressure) > 0.5 && (wantedValue/livePressure) < 0.8 ) outputValue--;
+        else if ((wantedValue/livePressure) > 0.95 )outputValue++;
+        constrain(outputValue,BAR_TO_DIMMER_OUTPUT[0],BAR_TO_DIMMER_OUTPUT[10]);
+    //    refreshTimer = millis();
+    //  }
+	    return outputValue;
     }
     else return outputValue;
   }else return BAR_TO_DIMMER_OUTPUT[uint8_t(wantedValue)];
@@ -469,10 +478,16 @@ void modeSelect() {
 void justDoCoffee() {
   uint8_t HPWR_LOW = HPWR/MainCycleDivider;
   static double heaterWave;
-  static uint8_t heaterState;
+  static uint8_t heaterState, heaterTempDirection;
+  static float previousTemp;
+  float BREW_TEMP_DELTA;
   // Calculating the boiler heating power range based on the below input values
   HPWR_OUT = mapRange(kProbeReadValue, setPoint - 10, setPoint, HPWR, HPWR_LOW, 0);
   HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, HPWR);  // limits range of sensor values to HPWR_LOW and HPWR
+  BREW_TEMP_DELTA = mapRange(kProbeReadValue, setPoint, setPoint+setPoint*0.10, setPoint*0.10, 0, 0);
+  BREW_TEMP_DELTA = constrain(BREW_TEMP_DELTA, 0,  setPoint*0.10);
+
+  
 
   if (brewState() == 1) {
     if (selectedOperationalMode == 0 || selectedOperationalMode == 5 || selectedOperationalMode == 9) {
@@ -481,49 +496,63 @@ void justDoCoffee() {
     }
     myNex.writeNum("warmupState", 0);
   // Applying the HPWR_OUT variable as part of the relay switching logic
-    if (kProbeReadValue > setPoint-3.0 && kProbeReadValue < setPoint+0.5) {
-	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
-		  PORTB |= _BV(PB0);  // relayPin -> HIGH
-		  heaterState=1;
-		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
-		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
-		  heaterState=0;
-		  heaterWave=millis();
-	  }	  
-    }else if(kProbeReadValue <= setPoint-3.0) PORTB |= _BV(PB0);   // relayPin -> HIGH
-    else PORTB &= ~_BV(PB0);  // relayPin -> LOW
-  } else {
+    if (kProbeReadValue < setPoint-0.25 && preinfusionFinished == false) {
+      if (millis() - heaterWave > HPWR_OUT && heaterState == 0) {
+		PORTB &= ~_BV(PB0);  // relayPin -> LOW
+        heaterState=1;
+        heaterWave=millis();
+      }else if (millis() - heaterWave > HPWR*MainCycleDivider && heaterState == 1) {
+        PORTB |= _BV(PB0);  // relayPin -> HIGH
+        heaterState=0;
+        heaterWave=millis();
+      }
+    } else if (kProbeReadValue < setPoint+BREW_TEMP_DELTA && preinfusionFinished == true) {
+  	if (millis() - heaterWave > HPWR*MainCycleDivider && heaterState == 0) {
+	  PORTB |= _BV(PB0);  // relayPin -> HIGH
+	  heaterState=1;
+	  heaterWave=millis();
+  	}else if (millis() - heaterWave > HPWR && heaterState == 1) {
+	  PORTB &= ~_BV(PB0);  // relayPin -> LOW
+	  heaterState=0;
+	  heaterWave=millis();
+  	}
+  } else if(kProbeReadValue <= setPoint-3.0) PORTB |= _BV(PB0);   // relayPin -> HIGH
+    else {
+      previousTemp = 0;
+      PORTB &= ~_BV(PB0);  // relayPin -> LOW
+	  }
+  } else { //if brewState == 0
+    previousTemp=0;
     brewTimer(0);
     if (kProbeReadValue < ((float)setPoint - 10.00)) {
       PORTB |= _BV(PB0);  // relayPin -> HIGH
     } else if (kProbeReadValue >= ((float)setPoint - 10.00) && kProbeReadValue < ((float)setPoint - 3.00)) {
-	  PORTB |= _BV(PB0);  // relayPin -> HIGH
-	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider) {
-		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
-		  heaterState=0;
-		  heaterWave=millis();
-	  }
+      PORTB |= _BV(PB0);  // relayPin -> HIGH
+      if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider) {
+        PORTB &= ~_BV(PB0);  // relayPin -> LOW
+        heaterState=0;
+        heaterWave=millis();
+      }
     } else if ((kProbeReadValue >= ((float)setPoint - 3.00)) && (kProbeReadValue <= ((float)setPoint - 1.00))) {
-	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
-		  PORTB |= _BV(PB0);  // relayPin -> HIGH
-		  heaterState=1;
-		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
-		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
-		  heaterState=0;
-		  heaterWave=millis();
-	  }	
+      if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
+        PORTB |= _BV(PB0);  // relayPin -> HIGH
+        heaterState=1;
+        heaterWave=millis();
+      }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
+        PORTB &= ~_BV(PB0);  // relayPin -> LOW
+        heaterState=0;
+        heaterWave=millis();
+      }	
     } else if ((kProbeReadValue >= ((float)setPoint - 0.5)) && kProbeReadValue < (float)setPoint) {
-	  if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
-		  PORTB |= _BV(PB0);  // relayPin -> HIGH
-		  heaterState=1;
-		  heaterWave=millis();
-	  }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
-		  PORTB &= ~_BV(PB0);  // relayPin -> LOW
-		  heaterState=0;
-		  heaterWave=millis();
-	  }
+      if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 0) {
+        PORTB |= _BV(PB0);  // relayPin -> HIGH
+        heaterState=1;
+        heaterWave=millis();
+      }else if (millis() - heaterWave > HPWR_OUT/BrewCycleDivider && heaterState == 1) {
+        PORTB &= ~_BV(PB0);  // relayPin -> LOW
+        heaterState=0;
+        heaterWave=millis();
+      }
     } else {
       PORTB &= ~_BV(PB0);  // relayPin -> LOW
     }
@@ -560,7 +589,6 @@ void lcdRefresh() {
   static bool tareDone;
   static uint8_t wErr;
   static float fWghtEntryVal;
-  float fWgt;
   
   if (millis() - pageRefreshTimer > REFRESH_SCREEN_EVERY) {
     myNex.writeNum("pressure.val", int(getPressure()*10));
@@ -597,14 +625,14 @@ void lcdRefresh() {
       // FLow calc
       if ((currentWeight - fWghtEntryVal) >= 0.5) {
         if (millis() - refreshTimer >= 1000) {
-          fWgt = (currentWeight - fWghtEntryVal)*10;
-          myNex.writeNum("flow.val", int(fWgt));
+          flowVal = (currentWeight - fWghtEntryVal)*10;
+          myNex.writeNum("flow.val", int(flowVal));
           fWghtEntryVal = currentWeight;
           refreshTimer = millis();
         }
       }
     }
-  }else if (brewState() == 0 && (myNex.currentPageId == 1 || myNex.currentPageId == 2||myNex.currentPageId == 8)) myNex.writeStr("weight.txt",String(currentWeight+fWgt,1));
+  }else if (brewState() == 0 && (myNex.currentPageId == 1 || myNex.currentPageId == 2||myNex.currentPageId == 8)) myNex.writeStr("weight.txt",String(currentWeight+flowVal,1));
   else if (brewState() == 0 && myNex.currentPageId == 11) {//scales screen updating
     if (millis() - scalesRefreshTimer > 200) {
       if(tareDone != 1) {
@@ -627,12 +655,12 @@ void lcdRefresh() {
       scalesRefreshTimer = millis();
     }
   }else {
-    previousWeight=0.0;
     tareDone=0;
     currentWeight=0;
     previousWeight=0;
     fWghtEntryVal=0;
 	wErr=0;
+	flowVal=0;
   }
 }
 //#############################################################################################
