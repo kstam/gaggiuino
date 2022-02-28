@@ -496,8 +496,8 @@ void justDoCoffee() {
     }
     myNex.writeNum("warmupState", 0);
   // Applying the HPWR_OUT variable as part of the relay switching logic
-    if (kProbeReadValue < setPoint-0.25 && preinfusionFinished == false) {
-      if (millis() - heaterWave > HPWR_OUT && heaterState == 0) {
+    if (kProbeReadValue < setPoint+0.5 && preinfusionFinished == false) {
+      if (millis() - heaterWave > HPWR_OUT*BrewCycleDivider && heaterState == 0) {
 		PORTB &= ~_BV(PB0);  // relayPin -> LOW
         heaterState=1;
         heaterWave=millis();
