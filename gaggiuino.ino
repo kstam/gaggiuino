@@ -62,7 +62,6 @@ unsigned long thermoTimer;
 //scales vars
 float currentWeight;
 float previousWeight;
-float flowVal;
 uint8_t targetWeight;
 
 
@@ -589,6 +588,7 @@ void lcdRefresh() {
   static bool tareDone;
   static uint8_t wErr;
   static float fWghtEntryVal;
+  float flowVal;
   
   if (millis() - pageRefreshTimer > REFRESH_SCREEN_EVERY) {
     myNex.writeNum("pressure.val", int(getPressure()*10));
