@@ -1020,6 +1020,7 @@ void scalesInit() {
       LoadCell_2.tare();
     }
   #endif
+  scalesPresent = false;
 }
 
 void scalesTare() {
@@ -1032,9 +1033,9 @@ void scalesTare() {
         LoadCell_2.tare(2);
       }
     #endif
-    tareDone=1;
-    previousBrewState=1;
   }
+  tareDone=1;
+  previousBrewState=1;
 }
 
 
