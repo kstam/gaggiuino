@@ -1040,10 +1040,11 @@ void scalesInit() {
       LoadCell_2.tare();
     }
   #endif
+  scalesPresent = false;
 }
 
 void scalesTare() {
-  if( !tareDone || !previousBrewState ) {
+  if(scalesPresent && (!tareDone || !previousBrewState )) {
     #if defined(SINGLE_HX711_CLOCK)
       if (LoadCells.is_ready()) LoadCells.tare(5);
     #else
@@ -1052,9 +1053,9 @@ void scalesTare() {
         LoadCell_2.tare(2);
       }
     #endif
-    tareDone=1;
-    previousBrewState=1;
   }
+  tareDone=1;
+  previousBrewState=1;
 }
 
 
