@@ -50,12 +50,14 @@
 #elif defined(ARDUINO_ARCH_STM32)// if arch is stm32
   // STM32F4 pins definitions
   #define zcPin PA15
-  #define thermoDO PA5 //PB4
-  #define thermoCS PA6 //PB5
-  #define thermoCLK PA7 //PB6
+  #define thermoCLK PB6
+  #define thermoDO PB4
+  #define thermoCS PB5
   #define brewPin PA11 // PD7
-  #define relayPin PB9  // PB0
+  #define relayPin PB0  // PB0
   #define dimmerPin PB3
+  #define adsSdaPin PB9
+  #define adsSclPin PB8
   #define pressurePin ADS115_A0 //set here just for reference
   #define steamPin PA12
   #define HX711_sck_1 PB0 //mcu > HX711 no 1 sck pin
@@ -87,7 +89,8 @@
 #if defined(ARDUINO_ARCH_STM32)// if arch is stm32
 //If additional USART ports want ti eb used thy should be enable first
 //HardwareSerial USART_CH(PA10, PA9);
-ADS1115 ADS(0x48);
+TwoWire adsWire(adsSdaPin, adsSclPin);
+ADS1115 ADS(0x48, &adsWire);
 #endif
 //Init the thermocouples with the appropriate pins defined above with the prefix "thermo"
 MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
