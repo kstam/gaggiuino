@@ -10,6 +10,7 @@
 #include <PSM.h>
 #include "platform.h"
 #include "PressureProfile.h"
+#include "log.h"
 
 // Define some const values
 #define GET_KTYPE_READ_EVERY 250 // thermocouple data read interval not recommended to be changed to lower than 250 (ms)
@@ -137,6 +138,8 @@ float pressureTargetComparator;
 
 void setup() {
   initUART();
+  LOG_INIT(&USART_DEBUG);
+  LOG_INFO("Gaggiuino booting");
 
   // Various pins operation mode handling
   pinInit();
@@ -152,19 +155,20 @@ void setup() {
   // Will wait hereuntil full serial is established, this is done so the LCD fully initializes before passing the EEPROM values
   while (myNex.readNumber("safetyTempCheck") != 100 )
   {
+    LOG_VERBOSE("Connecting to Nextion LCD");
     delay(100);
   }
 
   // Initialising the vsaved values or writing defaults if first start
   eepromInit();
 
-  //initPressure(myNex.readNumber("regHz"));
   platformInit(myNex.readNumber("regHz"));
 
   // Scales handling
   scalesInit();
   myNex.lastCurrentPageId = myNex.currentPageId;
   POWER_ON = true;
+  LOG_INFO("Setup sequence finished");
 }
 
 //##############################################################################################################################
@@ -496,6 +500,7 @@ void lcdRefresh() {
 //#############################################################################################
 // Save the desired temp values to EEPROM
 void trigger1() {
+    LOG_VERBOSE("Saving values to EEPROM");
     int valueToSave;
     int allValuesUpdated;
 
@@ -651,12 +656,14 @@ void trigger1() {
 //#############################################################################################
 
 void trigger2() {
+  LOG_VERBOSE("Tare scales");
   tareDone = false;
   previousBrewState = false;
   scalesTare();
 }
 
 void trigger3() {
+  LOG_VERBOSE("Scales enabled or disabled");
   homeScreenScalesEnabled = myNex.readNumber("scalesEnabled");
 }
 

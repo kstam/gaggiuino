@@ -45,6 +45,12 @@ void  setBoiler(int val);
   #define USE_TIMER_2 false
   #define USE_TIMER_3 false
 
+  #if defined(USART_DEBUG_RX) && defined (USART_DEBUG_TX)
+    #include <SoftwareSerial.h>
+    SoftwareSerial Serial2(USART_DEBUG_RX, USART_DEBUG_TX);
+    #define USART_DEBUG Serial2
+  #endif
+
   #include <TimerInterrupt_Generic.h>
   #include "platform/avr/platform-avr.h"
 
@@ -66,13 +72,20 @@ void  setBoiler(int val);
   #define HX711_sck_2 PB1
   #define HX711_dout_1  PA1
   #define HX711_dout_2  PA2
-  #define USART_DEBUG   Serial
+  #define USART_DEBUG_RX  PC14
+  #define USART_DEBUG_TX  PC15
   #define USART_CH      Serial
 
   #define ZC_MODE RISING
 
-  #if defined(DEBUG_ENABLED) && defined(ARDUINO_ARCH_STM32)
+  #if defined(DEBUG_ENABLED)
     #include "dbg.h"
+  #endif
+
+  #if defined(USART_DEBUG_RX) && defined (USART_DEBUG_TX)
+    #include <HardwareSerial.h>
+    HardwareSerial Serial2(USART_DEBUG_RX, USART_DEBUG_TX);
+    #define USART_DEBUG Serial2
   #endif
 
   #include "platform/stm32/platform-stm32.h"
@@ -83,6 +96,7 @@ void  setBoiler(int val);
 /////////////////////////////////////////////
 
 void initUART() {
+  USART_DEBUG.begin(115200);
   USART_CH.begin(115200);
 }
 
