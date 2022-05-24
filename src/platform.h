@@ -10,7 +10,6 @@ float getPressure();
 void  setBoiler(int val);
 
 #if defined(ARDUINO_ARCH_AVR)
-  #include <EEPROM.h>
 
   // ATMega32P pins definitions
   #define zcPin       2
@@ -56,7 +55,7 @@ void  setBoiler(int val);
 
 #elif defined(ARDUINO_ARCH_STM32)
   #include "ADS1X15.h"
-  #include "FlashStorage_STM32.h"
+  #include "FlashStorage_STM32.h" // Probably must be kept here, see https://github.com/khoih-prog/FlashStorage_STM32/tree/main/examples/multiFileProject
 
   // STM32F4 pins definitions
   #define zcPin       PA15
