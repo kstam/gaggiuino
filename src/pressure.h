@@ -1,6 +1,8 @@
-#ifndef PRESSURE_PROFILER_H
-#define PRESSURE_PROFILER_H
-
+#ifndef PRESSURE_H
+#define PRESSURE_H
+#include <Arduino.h>
+#include <PSM.h>
+#include "mcu_pinout.h"
 #include "utils.h"
 
 struct Phase
@@ -39,5 +41,10 @@ struct Phases
         return CurrentPhase{phase, timeInPP - accumulatedTime};
     }
 };
+
+void pressureInit(int hz);
+float getPressure();
+void setPressure(float targetValue);
+void setPump(int pct);
 
 #endif
