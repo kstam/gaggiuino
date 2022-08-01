@@ -179,6 +179,9 @@ static void sensorsReadPressure(void) {
   }
 }
 
+long totalClicks;
+long lastClickCount;
+
 static void calculateWeightAndFlow(void) {
   if (brewActive) {
     if (scalesIsPresent()) {
@@ -186,8 +189,9 @@ static void calculateWeightAndFlow(void) {
     }
 
     long elapsedTime = millis() - flowTimer;
+    totalClicks += getAndResetClickCounter();
     if (elapsedTime > REFRESH_FLOW_EVERY) {
-      long pumpClicks =  getAndResetClickCounter();
+      long pumpClicks = totalClicks - lastClickCount;
       float cps = 1000.f * pumpClicks / elapsedTime;
       currentState.pumpFlow = getPumpFlow(cps, currentState.pressure);
 
@@ -198,6 +202,7 @@ static void calculateWeightAndFlow(void) {
         shotWeight += currentState.pumpFlow * elapsedTime / 1000;
       }
 
+      lastClickCount = totalClicks;
       flowTimer = millis();
     }
   }
@@ -436,7 +441,8 @@ static void lcdRefresh(void) {
     #endif
 
     /*LCD temp output*/
-    myNex.writeNum("currentTemp",currentState.temperature - runningCfg.offsetTemp);
+    // myNex.writeNum("currentTemp",currentState.temperature - runningCfg.offsetTemp);
+    myNex.writeNum("currentTemp", totalClicks);
 
     /*LCD weight output*/
     if (myNex.currentPageId == 0 && homeScreenScalesEnabled) {
@@ -703,15 +709,17 @@ static void profiling(void) {
     }
   }
   else {
-    setPumpToRawValue(0);
+    setPumpOff();
   }
   // Keep that water at temp
   justDoCoffee();
 }
 
 static void manualPressureProfile(void) {
+  preinfusionFinished = true;
   int power_reading = myNex.readNumber("h0.val");
-  setPumpPressure(power_reading, 0.f, currentState);
+  float targetPressure = power_reading/10.f;
+  setPumpPressure(targetPressure, 0.f, currentState);
   justDoCoffee();
 }
 
@@ -736,6 +744,8 @@ static void brewJustStarted() {
   tareDone = false;
   shotWeight = 0.f;
   currentState.weight = 0.f;
+  totalClicks = 0;
+  lastClickCount = 0;
   previousWeight = 0.f;
   brewingTimer = millis();
   preinfusionFinished = false;
