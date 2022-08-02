@@ -7,7 +7,7 @@ PSM pump(zcPin, dimmerPin, PUMP_RANGE, ZC_MODE, 2, 4);
 
 short maxPumpClicksPerSecond = 50;
 
-float maxFlowAt0Bar = 0.28;
+float maxFlowAt0Bar = 0.26;
 float maxFlowAt5Bar = 0.151;
 float maxFlowAt8Bar = 0.117;
 float maxFlowAt15Bar = 0;
@@ -74,7 +74,7 @@ long getAndResetClickCounter(void) {
 }
 
 float estimatePressureAtPump(float pressureAtPuck, float cps) {
-  float difference = fmaxf(0.f, -0.668f +  0.183f * cps + -0.00168f * cps * cps);
+  float difference = fmaxf(0.f, -0.679f +  0.16f * cps + -0.00126f * cps * cps);
   return pressureAtPuck + difference;
 }
 

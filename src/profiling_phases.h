@@ -26,8 +26,17 @@ struct Phase {
 };
 
 struct CurrentPhase {
-    short phaseIndex;
+    int index;
+    Phase &phase;
     unsigned long timeInPhase;
+
+    float getTarget() {
+      return phase.getTarget(timeInPhase);
+    }
+
+    float getRestriction() {
+      return phase.getRestriction(timeInPhase);
+    }
 };
 
 struct Phases {
@@ -35,14 +44,14 @@ struct Phases {
     Phase *phases;
 
     CurrentPhase getCurrentPhase(unsigned long timeInPhase) {
-        short phase = 0;
+        short phaseIdx = 0;
         unsigned long accumulatedTime = 0;
 
-        while (phase < count - 1 && timeInPhase >= accumulatedTime + (phases[phase].durationMs)) {
-            accumulatedTime += phases[phase].durationMs;
-            phase += 1;
+        while (phaseIdx < count - 1 && timeInPhase >= accumulatedTime + (phases[phaseIdx].durationMs)) {
+            accumulatedTime += phases[phaseIdx].durationMs;
+            phaseIdx += 1;
         }
-        return CurrentPhase{phase, timeInPhase - accumulatedTime};
+        return CurrentPhase{phaseIdx, phases[phaseIdx], timeInPhase - accumulatedTime};
     }
 };
 

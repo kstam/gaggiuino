@@ -694,17 +694,18 @@ static void profiling(void) {
   if (brewActive) { //runs this only when brew button activated and pressure profile selected
     long timeInPP = millis() - brewingTimer;
     CurrentPhase currentPhase = phases.getCurrentPhase(timeInPP);
-    preinfusionFinished = currentPhase.phaseIndex >= preInfusionFinishedPhaseIdx;
 
-    if (phases.phases[currentPhase.phaseIndex].type == PHASE_TYPE_PRESSURE) {
-      float newBarValue = phases.phases[currentPhase.phaseIndex].getTarget(currentPhase.timeInPhase);
-      float flowRestriction =  phases.phases[currentPhase.phaseIndex].getRestriction(currentPhase.timeInPhase);
+    preinfusionFinished = currentPhase.index >= preInfusionFinishedPhaseIdx;
+
+    if (currentPhase.phase.type == PHASE_TYPE_PRESSURE) {
+      float newBarValue = currentPhase.getTarget();
+      float flowRestriction =  currentPhase.getRestriction();
       setPumpPressure(newBarValue, flowRestriction, currentState);
 
       pressureTargetComparator = preinfusionFinished ? newBarValue : currentState.pressure;
     } else {
-      float newFlowValue = phases.phases[currentPhase.phaseIndex].getTarget(currentPhase.timeInPhase);
-      float pressureRestriction =  phases.phases[currentPhase.phaseIndex].getRestriction(currentPhase.timeInPhase);
+      float newFlowValue = currentPhase.getTarget();
+      float pressureRestriction =  currentPhase.getRestriction();
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
   }
