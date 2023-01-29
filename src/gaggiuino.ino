@@ -163,6 +163,7 @@ static void sensorsReadWeight(void) {
 static void sensorsReadPressure(void) {
   float elapsedTime = millis() - pressureTimer;
 
+  pressureReadSensors();
   if (elapsedTime > GET_PRESSURE_READ_EVERY) {
     float elapsedTimeSec = elapsedTime / 1000.f;
     currentState.pressure = getPressure();
