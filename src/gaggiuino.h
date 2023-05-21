@@ -72,7 +72,6 @@ unsigned long flowTimer;
 unsigned long steamTime;
 
 //scales vars
-float previousWeight  = 0;
 bool tareDone         = false;
 
 // brew detection vars
