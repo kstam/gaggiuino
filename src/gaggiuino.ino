@@ -151,11 +151,14 @@ static void sensorsReadWeight(void) {
       if (!nonBrewModeActive && (fabsf(scalesGetWeight()) > 0.3f)) tareDone = false;
       else tareDone = true;
     }
-    float previousWeight = currentState.weight;
-    currentState.weight = scalesGetWeight();
-    currentState.weightFlow = 1000.f * (currentState.weight - previousWeight) / static_cast<float>(elapsedTime);
+    
+    weightMeasurements.add(scalesGetWeight());
+    currentState.weight = weightMeasurements.latest().value;
+    currentState.weightFlow = weightMeasurements.measurementChange().changeSpeed();
     currentState.smoothedWeightFlow = smoothScalesFlow.updateEstimate(currentState.weightFlow);
+
     if (brewActive) currentState.shotWeight = currentState.weight;
+
     scalesTimer = millis();
   }
 }
