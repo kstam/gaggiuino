@@ -141,9 +141,16 @@ static void sensorReadSwitches(void) {
   currentState.hotWaterSwitchState = waterPinState() || (currentState.brewSwitchState && currentState.steamSwitchState); // use either an actual switch, or the GC/GCP switch combo
 }
 
+uint32_t temperatureReadErrorSince = 0u;
 static void sensorsReadTemperature(void) {
   if (millis() > thermoTimer) {
-    currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;
+    float temperature = thermocoupleRead() - runningCfg.offsetTemp;
+    if (temperature > 0.0f && temperature != NAN && temperature < 170.0f) { // valid reading
+      currentState.temperature = temperature;
+      temperatureReadErrorSince = 0; // We got valid measurement. Reset error since/
+    } else if (temperatureReadErrorSince == 0) { // First invalid measurement
+      temperatureReadErrorSince = millis();
+    }
     thermoTimer = millis() + GET_KTYPE_READ_EVERY;
   }
 }
@@ -800,7 +807,7 @@ static inline void sysHealthCheck(float pressureThreshold) {
 
   /* This *while* is here to prevent situations where the system failed to get a temp reading and temp reads as 0 or -7(cause of the offset)
   If we would use a non blocking function then the system would keep the SSR in HIGH mode which would most definitely cause boiler overheating */
-  while (currentState.temperature <= 0.0f || currentState.temperature == NAN || currentState.temperature >= 170.0f) {
+  while (temperatureReadErrorSince > 0 && millis() - temperatureReadErrorSince > 2000u) {
     //Reloading the watchdog timer, if this function fails to run MCU is rebooted
     watchdogReload();
     /* In the event of the temp failing to read while the SSR is HIGH
@@ -811,8 +818,7 @@ static inline void sysHealthCheck(float pressureThreshold) {
     if (millis() > thermoTimer) {
       LOG_ERROR("Cannot read temp from thermocouple (last read: %.1lf)!", static_cast<double>(currentState.temperature));
       currentState.steamSwitchState ? lcdShowPopup("COOLDOWN") : lcdShowPopup("TEMP READ ERROR"); // writing a LCD message
-      currentState.temperature  = thermocoupleRead() - runningCfg.offsetTemp;  // Making sure we're getting a value
-      thermoTimer = millis() + GET_KTYPE_READ_EVERY;
+      sensorsReadTemperature();
     }
   }
 
