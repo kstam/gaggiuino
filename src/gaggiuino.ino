@@ -159,8 +159,8 @@ static void sensorsReadWeight(void) {
   uint32_t elapsedTime = millis() - scalesTimer;
 
   if (elapsedTime > GET_SCALES_READ_EVERY) {
-    currentState.scalesPresent = scalesIsPresent();
-    if (currentState.scalesPresent) {
+    systemState.scalesPresent = scalesIsPresent();
+    if (systemState.scalesPresent) {
       if (currentState.tarePending) {
         scalesTare();
         weightMeasurements.clear();
@@ -237,7 +237,7 @@ static void calculateWeightAndFlow(void) {
         //   }
         // }
         currentState.consideredFlow = smoothConsideredFlow.updateEstimate(actualFlow);
-        currentState.shotWeight = currentState.scalesPresent ? currentState.shotWeight : currentState.shotWeight + actualFlow;
+        currentState.shotWeight = systemState.scalesPresent ? currentState.shotWeight : currentState.shotWeight + actualFlow;
       }
       currentState.waterPumped += consideredFlow;
     }
@@ -608,7 +608,7 @@ static void cpsInit(GaggiaSettings &runningCfg) {
 }
 
 static void doLed(void) {
-  if (runningCfg.ledDisco && brewActive) {
+  if (runningCfg.led.disco && brewActive) {
     switch(systemState.operationMode) {
       case OperationMode::BREW_AUTO:
       case OperationMode::BREW_MANUAL:
