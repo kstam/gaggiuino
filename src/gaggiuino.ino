@@ -278,7 +278,6 @@ static void modeSelect(void) {
   switch (systemState.operationMode) {
     //REPLACE ALL THE BELOW WITH OPMODE_auto_profiling
     case OperationMode::BREW_AUTO:
-      nonBrewModeActive = false;
       if (currentState.hotWaterSwitchState) hotWaterMode(currentState);
       else if (currentState.steamSwitchState) steamCtrl(runningCfg, currentState, systemState);
       else {
@@ -287,18 +286,15 @@ static void modeSelect(void) {
       }
       break;
     case OperationMode::BREW_MANUAL:
-      nonBrewModeActive = false;
       if (!currentState.steamSwitchState) steamTime = millis();
       profiling();
       break;
     case OperationMode::FLUSH:
-      nonBrewModeActive = true;
       if (!currentState.steamSwitchState) steamTime = millis();
       backFlush(currentState);
       brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature, false);
       break;
     case OperationMode::STEAM:
-      nonBrewModeActive = true;
       steamCtrl(runningCfg, currentState, systemState);
 
       if (!currentState.steamSwitchState) {
@@ -307,7 +303,6 @@ static void modeSelect(void) {
       }
       break;
     case OperationMode::DESCALE:
-      nonBrewModeActive = true;
       if (!currentState.steamSwitchState) steamTime = millis();
       deScale(runningCfg, currentState, systemState);
       break;
